@@ -8,7 +8,7 @@ This lab deliberately creates an **insecure** device state on an Internet-reacha
 
 | Asset | Threat | Control in this repository | Your responsibility |
 |---|---|---|---|
-| VM RDP endpoint | Brute force / exploitation from the Internet | NSG allows TCP 3389 **only** from `allowed_rdp_cidr` (`/32` enforced by validation) | Keep `allowed_rdp_cidr` current; consider Azure Bastion or JIT VM access |
+| VM RDP endpoint | Brute force / exploitation from the Internet | NSG allows TCP 3389 **only** from one `/32`: `allowed_rdp_cidr` or the auto-detected IP. Validation enforces `/32` and rejects documentation addresses | Keep `allowed_rdp_cidr` current; consider Azure Bastion or JIT VM access |
 | Local admin credential | Leak through repo or state | Password is a sensitive variable, never in `tfvars.example`; `*.tfvars` and `*.tfstate*` are git-ignored | Use a unique strong password; protect or delete local state |
 | CLIENT-02 during `Apply` | Firewall and RTP disabled | Script backs up and restores; warns when Defender changes are blocked | Keep the window short; don't browse or handle data; `Restore` promptly |
 | Entra tenant | CA misconfiguration causing lockout | Docs require Report-only, scoped users, break-glass exclusion | Follow [Conditional Access](conditional-access.md) guidance |
@@ -23,6 +23,7 @@ This lab deliberately creates an **insecure** device state on an Internet-reacha
 - Defense in depth: the NSG is the main control. During `Apply`, the Windows Firewall on CLIENT-02 is **off**, so the NSG is the **only** network control.
 - Safer alternatives (not implemented): [Azure Bastion](https://learn.microsoft.com/azure/bastion/bastion-overview), [Just-in-time VM access](https://learn.microsoft.com/azure/defender-for-cloud/just-in-time-access-usage), or a point-to-site VPN without public IPs.
 - Never widen `allowed_rdp_cidr`. The `/32` validation exists to prevent that.
+- Auto-detection trusts the HTTPS response from `api.ipify.org`. If you do not want Terraform to make that call, pin `allowed_rdp_cidr`.
 
 ## Secrets and Terraform state
 

@@ -5,8 +5,9 @@ project_name = "intune-lab"
 location     = "uaenorth"
 vm_size      = "Standard_B2ms"
 
-# Replace with your own public IPv4 address and keep /32.
-allowed_rdp_cidr = "203.0.113.10/32"
+# Optional. Leave commented out to auto-detect the public IP of the machine running Terraform.
+# To pin it, use your own public IPv4 address with /32.
+# allowed_rdp_cidr = "YOUR_PUBLIC_IP/32"
 
 # Confirm the selected Windows image is available in your region.
 windows_sku = "win11-24h2-ent"

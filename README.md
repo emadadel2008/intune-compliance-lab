@@ -6,71 +6,54 @@
 [![Microsoft Intune](https://img.shields.io/badge/Microsoft-Intune-0078D4?logo=microsoft&logoColor=white)](docs/compliance-policies.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A small, persistent **Windows 11 Enterprise lab on Azure** for practicing **Microsoft Intune device compliance** and **Microsoft Entra Conditional Access**. Terraform deploys two virtual machines. You then enroll them in Intune, assign a compliance policy, and deliberately push one device out of compliance to watch Intune evaluate, report, and (optionally) Conditional Access enforce.
+A hands-on **Windows 11 lab on Azure** for learning **Microsoft Intune device compliance** and **Microsoft Entra Conditional Access**.
+
+Terraform deploys two Windows 11 virtual machines. You enroll both in Intune, apply a compliance policy, then deliberately make one device noncompliant and watch Intune report it and Conditional Access react.
 
 > [!IMPORTANT]
-> This repository automates **Azure infrastructure only**. Microsoft Entra join, Intune enrollment, compliance policies, and Conditional Access policies are **manual, post-deployment steps** documented in this repository. Nothing in Intune or Entra ID is created by Terraform.
+> Terraform automates the **Azure infrastructure only**. Entra join, Intune enrollment, compliance policies, and Conditional Access are **manual steps** that this README and the [step-by-step guides](docs/00-lab-overview.md) walk you through.
 
 ---
 
 ## Contents
 
-- [Objectives](#objectives)
-- [What you will learn](#what-you-will-learn)
-- [Lab features and scenarios](#lab-features-and-scenarios)
-- [Architecture overview](#architecture-overview)
-- [Technology stack](#technology-stack)
-- [Prerequisites](#prerequisites)
-- [Quick start](#quick-start)
-- [Repository structure](#repository-structure)
-- [Documentation](#documentation)
-- [Expected lab outcomes](#expected-lab-outcomes)
-- [Troubleshooting and support](#troubleshooting-and-support)
-- [Contributing](#contributing)
-- [License](#license)
+1. [What this lab does](#what-this-lab-does)
+2. [How it works](#how-it-works)
+3. [Before you start](#before-you-start)
+4. [Lab steps](#lab-steps)
+   - [Step 1: Prepare your workstation](#step-1-prepare-your-workstation)
+   - [Step 2: Deploy the Azure VMs](#step-2-deploy-the-azure-vms)
+   - [Step 3: Enroll both VMs in Intune](#step-3-enroll-both-vms-in-intune)
+   - [Step 4: Create the compliance policy](#step-4-create-the-compliance-policy)
+   - [Step 5: Make CLIENT-02 noncompliant](#step-5-make-client-02-noncompliant)
+   - [Step 6: Test Conditional Access (optional)](#step-6-test-conditional-access-optional)
+   - [Step 7: Restore and clean up](#step-7-restore-and-clean-up)
+5. [Expected results](#expected-results)
+6. [Repository structure](#repository-structure)
+7. [Documentation](#documentation)
+8. [Troubleshooting](#troubleshooting)
+9. [Contributing and license](#contributing-and-license)
 
-## Objectives
+---
 
-| # | Objective |
-|---|---|
-| 1 | Deploy a repeatable, least-exposure Windows 11 lab on Azure with Infrastructure as Code. |
-| 2 | Enroll Windows VMs into Microsoft Intune through Microsoft Entra join. |
-| 3 | Build and assign a Windows compliance policy based on Firewall and Microsoft Defender settings. |
-| 4 | Produce one **compliant** device (`CLIENT-01`) and one **noncompliant** device (`CLIENT-02`) and observe how Intune reports each. |
-| 5 | Optionally, use Conditional Access in **Report-only** mode to see how compliance state affects access to cloud apps. |
+## What this lab does
 
-## What you will learn
-
-- The difference between **device configuration** (setting state), **compliance evaluation** (checking state), **reporting**, and **enforcement** (Conditional Access).
-- How Entra join and automatic MDM enrollment bring a Windows device under Intune management.
-- How Intune evaluates Windows Security Center–backed settings such as Firewall, Antivirus, and Real-time protection.
-- How check-in timing, tenant-wide compliance settings, and Tamper Protection affect what you see in reports.
-- How to roll out Conditional Access safely (Report-only, exclusions, sign-in log analysis).
-- Why Intune management of Azure VMs has [documented limitations](docs/architecture.md#intune-on-azure-vms-limitations) compared with physical devices.
-
-## Lab features and scenarios
-
-| Component | Status | Where |
+| Device | Role in the lab | Expected compliance |
 |---|---|---|
-| Azure resource group, VNet, subnet | Implemented (Terraform) | [`terraform/main.tf`](terraform/main.tf) |
-| NSG allowing RDP **only** from your `/32` | Implemented (Terraform) | [`terraform/security.tf`](terraform/security.tf) |
-| Two Windows 11 Enterprise VMs with Trusted Launch (Secure Boot + vTPM) | Implemented (Terraform) | [`terraform/virtual-machines.tf`](terraform/virtual-machines.tf) |
-| Pre-flight / deploy and guarded destroy helpers | Implemented (PowerShell) | [`scripts/`](scripts/) |
-| `CLIENT-02` drift script (disable/restore Firewall and Defender RTP) | Implemented (PowerShell) | [`Set-Client02LabState.ps1`](Set-Client02LabState.ps1) |
-| Entra join and Intune enrollment | Manual procedure | [Device enrollment](docs/device-enrollment.md) |
-| Windows compliance policy | Manual procedure | [Compliance policies](docs/compliance-policies.md) |
-| Conditional Access (require compliant device) | Optional manual procedure | [Conditional Access](docs/conditional-access.md) |
+| `CLIENT-01` | **Control device.** Left untouched. | Compliant |
+| `CLIENT-02` | **Test device.** Firewall and Defender real-time protection are switched off for a short test with [`Set-Client02LabState.ps1`](Set-Client02LabState.ps1). | Not compliant, then compliant again after restore |
 
-Guided scenarios are in [Lab scenarios](docs/lab-scenarios.md):
+Comparing the two shows that a change in Intune's report is caused by the **device state**, not by the policy or the tenant.
 
-1. **Deploy the lab infrastructure**
-2. **Enroll both VMs into Intune**
-3. **Create and assign a compliance policy, and baseline both devices**
-4. **Drive `CLIENT-02` noncompliant, then recover it**
-5. **(Optional) Evaluate Conditional Access in Report-only mode**
-6. **Clean up**
+**You will learn:**
 
-## Architecture overview
+- The difference between **configuration** (setting device state), **compliance** (checking it), **reporting**, and **enforcement** (Conditional Access).
+- How Entra join and automatic MDM enrollment bring a Windows device under Intune management.
+- How Intune evaluates Firewall, Antivirus, and real-time protection settings, and how check-in timing and Tamper Protection affect the results.
+- How to roll out Conditional Access safely: Report-only mode, exclusions, and sign-in log review.
+- Why Intune on Azure VMs has [documented limitations](docs/architecture.md#intune-on-azure-vms-limitations) compared with physical devices.
+
+## How it works
 
 ```mermaid
 flowchart LR
@@ -78,7 +61,7 @@ flowchart LR
 
     subgraph azure["Azure subscription"]
         subgraph rg["Resource group: project_name-rg"]
-            nsg["NSG: intune-lab-nsg<br/>Allow TCP 3389 from allowed_rdp_cidr only"]
+            nsg["NSG: intune-lab-nsg<br/>Allow TCP 3389 from one /32 only"]
             subgraph vnet["VNet 10.40.0.0/16"]
                 subgraph snet["Subnet 10.40.1.0/24"]
                     c1["CLIENT-01<br/>Windows 11 Enterprise<br/>Target: compliant"]
@@ -104,129 +87,270 @@ flowchart LR
     entra -- "grant / block" --> m365
 ```
 
-Solid lines are deployed or performed by the administrator. Dotted lines are manual post-deployment enrollment steps. See [Architecture](docs/architecture.md) for component relationships and design decisions.
+1. **Terraform** creates the resource group, network, NSG, and two VMs (solid lines).
+2. You **join** each VM to Microsoft Entra ID. Automatic enrollment registers it in **Intune** (dotted lines).
+3. Intune **evaluates** each device against the compliance policy and writes the result to Entra ID.
+4. **Conditional Access** reads that result when a user signs in to a cloud app from the device, and grants or blocks access.
 
-## Technology stack
+| What | Implemented by | Where |
+|---|---|---|
+| Resource group, VNet, subnet, NSG, 2 VMs (Trusted Launch) | Terraform | [`terraform/`](terraform/) |
+| RDP restricted to your `/32` (auto-detected or set) | Terraform | [`terraform/security.tf`](terraform/security.tf) |
+| Deploy / destroy helpers | PowerShell | [`scripts/`](scripts/) |
+| CLIENT-02 drift script (Status / Apply / Restore) | PowerShell | [`Set-Client02LabState.ps1`](Set-Client02LabState.ps1) |
+| Entra join, Intune enrollment, compliance policy, Conditional Access | **Manual** | [Step-by-step guides](docs/00-lab-overview.md) |
 
-| Layer | Technology |
+Full details: [Architecture](docs/architecture.md).
+
+## Before you start
+
+| Area | You need |
 |---|---|
-| Infrastructure as Code | Terraform `>= 1.6`, `hashicorp/azurerm ~> 4.0` (lock file pins 4.81.0) |
-| Cloud platform | Microsoft Azure: Virtual Machines, Virtual Network, NSG, Standard Public IP |
-| Guest OS | Windows 11 Enterprise, Marketplace image `MicrosoftWindowsDesktop/Windows-11/win11-24h2-ent` (default) |
-| Identity | Microsoft Entra ID (device join, Conditional Access) |
-| Endpoint management | Microsoft Intune (MDM enrollment, compliance policies) |
-| Endpoint security | Windows Firewall, Microsoft Defender Antivirus |
-| Automation | PowerShell, Azure CLI |
-
-## Prerequisites
-
-| Area | Requirement |
-|---|---|
-| Azure | Subscription and a role that can create resource groups, networks, and VMs (for example **Contributor**) |
-| Tools | [Terraform CLI](https://developer.hashicorp.com/terraform/install), [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), Remote Desktop client |
-| Network | Your public IPv4 address (used as `allowed_rdp_cidr`, `/32`) |
-| Licensing | Windows 11 Enterprise virtualization rights; Microsoft Intune Plan 1; Microsoft Entra ID P1 (automatic enrollment and Conditional Access) |
-| Entra / Intune roles | Intune Administrator (or equivalent); Conditional Access Administrator for the optional scenario |
-
-Full details: [Prerequisites](docs/prerequisites.md).
-
-## Quick start
+| Azure | A subscription and **Contributor** rights; `Microsoft.Compute` and `Microsoft.Network` providers registered |
+| Tools | [Terraform](https://developer.hashicorp.com/terraform/install) 1.6+, [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli), a Remote Desktop client |
+| Licensing | Microsoft Intune Plan 1 and Microsoft Entra ID P1 for the test user (for example Microsoft 365 E3/E5); eligible Windows 11 Enterprise licensing |
+| Accounts | A dedicated, licensed, **non-admin** test user, and an emergency access account to exclude from Conditional Access |
+| Admin roles | Intune Administrator; Conditional Access Administrator for Step 6 |
+| Network | Outbound HTTPS to `api.ipify.org` for RDP IP auto-detection, or your public IPv4 to set manually |
 
 > [!WARNING]
-> Deploying creates billable Azure resources. Review [cost notes](docs/prerequisites.md#cost-considerations) first.
+> The lab creates **billable** Azure resources. Deallocate the VMs between sessions and destroy the lab when finished. See [Cost considerations](docs/prerequisites.md#cost-considerations).
+
+Full details: [01 - Prerequisites](docs/01-prerequisites.md).
+
+---
+
+## Lab steps
+
+Each step explains **what** you do and **why**, gives the key commands, and shows the result to expect. Follow the linked guide for full instructions.
+
+### Step 1: Prepare your workstation
+
+**Why:** Terraform deploys into whichever Azure subscription is active, so confirm it first.
 
 ```powershell
-# 1. Clone and enter the Terraform directory
 git clone https://github.com/emadadel2008/intune-compliance-lab.git
 cd intune-compliance-lab\terraform
 
-# 2. Sign in to Azure and select YOUR subscription
 az login
 az account set --subscription "YOUR_SUBSCRIPTION_ID"
-
-# 3. Create your private variables file (git-ignored)
-Copy-Item .\terraform.tfvars.example .\terraform.tfvars
-notepad .\terraform.tfvars   # set location and allowed_rdp_cidr = "YOUR_PUBLIC_IP/32"
-
-# 4. Pre-flight checks: init, fmt, validate, plan
-..\scripts\deploy.ps1
-
-# 5. Deploy (prompts for admin_password unless TF_VAR_admin_password is set)
-terraform apply
-
-# 6. Get connection details
-terraform output
+az account show --output table
 ```
 
-Then follow [Device enrollment](docs/device-enrollment.md) and [Lab scenarios](docs/lab-scenarios.md). The full walkthrough is in the [Setup guide](docs/setup-guide.md).
+✅ **Expected:** `az account show` displays the subscription you intend to use.
+
+📘 Guide: [01 - Prerequisites](docs/01-prerequisites.md)
+
+### Step 2: Deploy the Azure VMs
+
+**Why:** This creates the two Windows 11 devices you will manage. RDP is allowed only from your own public IP.
+
+1. Create your private variables file. It is git-ignored.
+
+   ```powershell
+   Copy-Item .\terraform.tfvars.example .\terraform.tfvars
+   notepad .\terraform.tfvars
+   ```
+
+   | Setting | What to put |
+   |---|---|
+   | `location` | Your Azure region (default `uaenorth`) |
+   | `vm_size` | Optional; default `Standard_B2ms` |
+   | `allowed_rdp_cidr` | Optional. Leave it out to auto-detect your public IP, or set `"YOUR_PUBLIC_IP/32"` |
+   | `admin_password` | **Do not put it in the file.** Terraform prompts for it. |
+
+2. Deploy:
+
+   ```powershell
+   terraform init
+   terraform plan -out tfplan
+   terraform apply tfplan
+   terraform output
+   ```
+
+   Or run `..\scripts\deploy.ps1` for pre-flight checks and a plan, then `terraform apply`.
+
+✅ **Expected:** `terraform output` shows both VM names, their public IPs, and `rdp_allowed_source` equal to your public IP `/32`. You can RDP to each VM as `.\labadmin`.
+
+📘 Guide: [02 - Azure infrastructure](docs/02-azure-infrastructure.md) · Full walkthrough: [Setup guide](docs/setup-guide.md)
+
+### Step 3: Enroll both VMs in Intune
+
+**Why:** Intune can only evaluate devices it manages. Entra join gives each VM a cloud identity, and automatic enrollment makes Intune manage it.
+
+1. **Once per tenant:** allow the test user to join devices, and set the **MDM user scope** to include the test user (Intune admin center → Devices → Windows → Enrollment → Automatic Enrollment).
+2. **On each VM:** Settings → Accounts → Access work or school → **Connect** → **Join this device to Microsoft Entra ID** → sign in as `YOUR_TEST_USER` → restart.
+3. **Verify** on each VM:
+
+   ```powershell
+   dsregcmd /status | Select-String "AzureAdJoined|MdmUrl"
+   ```
+
+✅ **Expected:** `AzureAdJoined : YES`, a non-empty `MdmUrl`, and both devices listed in Intune admin center → Devices → Windows.
+
+📘 Guide: [03 - Intune enrollment](docs/03-intune-enrollment.md)
+
+### Step 4: Create the compliance policy
+
+**Why:** The policy defines what "healthy" means. Intune checks each device against it at every check-in.
+
+1. Create a device group `GRP-IntuneLab-Devices` containing `CLIENT-01` and `CLIENT-02`.
+2. Create a **Windows 10 and later** compliance policy `CP-Win-IntuneLab-Baseline`:
+
+   | Setting | Value |
+   |---|---|
+   | Firewall | Require |
+   | Antivirus, Antispyware | Require |
+   | Real-time protection | Require |
+   | Mark device noncompliant | Immediately |
+
+3. Assign it to `GRP-IntuneLab-Devices`, then **Sync** each VM (Access work or school → Info → Sync).
+
+✅ **Expected:** both devices show **Compliant**. This is your baseline.
+
+📘 Guide: [04 - Compliance policy](docs/04-compliance-policy.md)
+
+### Step 5: Make CLIENT-02 noncompliant
+
+**Why:** Seeing a device fail, and recover, shows exactly how compliance evaluation works.
+
+On `CLIENT-02`, in an **elevated** PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass -Force
+.\Set-Client02LabState.ps1 -Action Status    # current state
+.\Set-Client02LabState.ps1 -Action Apply     # back up, then disable Firewall and Defender RTP
+```
+
+Then **Sync** the device and refresh its compliance in Intune.
+
+✅ **Expected:** `CLIENT-02` becomes **Not compliant** on the **Firewall** setting. `CLIENT-01` stays Compliant.
+
+> [!NOTE]
+> Tamper Protection may block the Defender change. That is expected; do not bypass it. The Firewall setting is the reliable signal.
+
+📘 Guide: [04 - Compliance policy](docs/04-compliance-policy.md#4-make-client-02-noncompliant) · Script reference: [CLIENT-02 lab script](docs/client02-lab-script.md)
+
+### Step 6: Test Conditional Access (optional)
+
+**Why:** Compliance becomes meaningful when it controls access. Report-only mode shows what *would* happen without blocking anyone.
+
+1. Create a Conditional Access policy `CA-IntuneLab-RequireCompliantDevice-ReportOnly`:
+   - **Users:** include `YOUR_TEST_USER`; **exclude** emergency access accounts and your admin account.
+   - **Target resources:** Office 365.
+   - **Grant:** Require device to be marked as compliant.
+   - **Enable policy:** **Report-only**.
+2. From each VM, sign in to `https://www.office.com` in Microsoft Edge as `YOUR_TEST_USER`.
+3. Review **Entra admin center → Sign-in logs → Report-only** tab.
+
+✅ **Expected:** `CLIENT-01` shows *Report-only: Success*; `CLIENT-02` shows *Report-only: Failure*.
+
+> [!WARNING]
+> Never start in **On** mode. A misconfigured policy can lock you out of the tenant.
+
+📘 Guide: [05 - Conditional Access](docs/05-conditional-access.md)
+
+### Step 7: Restore and clean up
+
+**Why:** CLIENT-02 should not stay unprotected, and lab resources cost money while they exist.
+
+1. On `CLIENT-02`: `.\Set-Client02LabState.ps1 -Action Restore`, then sync. It should return to **Compliant**.
+2. Delete the Conditional Access policy, the compliance policy, the lab devices in Intune and Entra ID (**Delete**, never **Wipe**), and the lab group.
+3. Destroy the Azure resources from the `terraform` folder:
+
+   ```powershell
+   ..\scripts\destroy.ps1      # type DESTROY to confirm
+   az group exists --name intune-lab-rg
+   ```
+
+✅ **Expected:** `az group exists` returns `false`.
+
+📘 Guide: [07 - Cleanup](docs/07-cleanup.md)
+
+---
+
+## Expected results
+
+| Device | Device state | Intune compliance | Conditional Access (Report-only) |
+|---|---|---|---|
+| `CLIENT-01` | Firewall on, Defender RTP on | Compliant | Success (would grant) |
+| `CLIENT-02` after `Apply` | Firewall off; RTP off unless blocked by Tamper Protection | Not compliant | Failure (would block) |
+| `CLIENT-02` after `Restore` | Original settings | Compliant after next check-in | Success (would grant) |
+
+These are **expected** results. Actual results depend on your tenant settings, Windows build, and check-in timing. Record yours with the [evidence log template](docs/validation-and-testing.md#evidence-log-template).
 
 ## Repository structure
 
 ```text
 intune-compliance-lab/
-├── README.md                      # This landing page
+├── README.md                      # This page
 ├── CHANGELOG.md                   # Notable changes
-├── CONTRIBUTING.md                # Contribution and public-repo hygiene rules
+├── CONTRIBUTING.md                # Contribution and repository hygiene rules
 ├── LICENSE                        # MIT
 ├── Set-Client02LabState.ps1       # Runs inside CLIENT-02: Status / Apply / Restore
-├── docs/                          # Detailed documentation (start at docs/index.md)
-│   └── images/                    # Visual assets and screenshot capture list
+├── docs/
+│   ├── 00-lab-overview.md … 07-cleanup.md   # Step-by-step guides
+│   ├── index.md                   # Documentation home and reference pages
+│   └── images/                    # Screenshot capture list
 ├── scripts/
 │   ├── deploy.ps1                 # Pre-flight: tool checks, init, fmt, validate, plan
-│   └── destroy.ps1                # Destroy plan + typed confirmation
+│   └── destroy.ps1                # Destroy with typed confirmation
 └── terraform/
     ├── versions.tf                # Terraform and provider constraints
     ├── providers.tf               # azurerm provider configuration
     ├── variables.tf               # Inputs and validation rules
     ├── main.tf                    # Resource group, VNet, subnet
-    ├── security.tf                # NSG, RDP rule, NIC associations
+    ├── security.tf                # NSG, RDP rule, public IP detection
     ├── virtual-machines.tf        # Public IPs, NICs, Windows 11 VMs
-    ├── outputs.tf                 # RG name, VM names, public IPs, username
+    ├── outputs.tf                 # RG name, VM names, public IPs, username, RDP source
     ├── terraform.tfvars.example   # Safe placeholder values
     └── .terraform.lock.hcl        # Provider version lock
 ```
 
 ## Documentation
 
-| Guide | Description |
+**Step-by-step guides** (follow in order):
+
+| Step | Guide | Covers |
+|---|---|---|
+| 00 | [Lab overview](docs/00-lab-overview.md) | Objectives, environment, workflow |
+| 01 | [Prerequisites](docs/01-prerequisites.md) | Licensing, roles, accounts, tools |
+| 02 | [Azure infrastructure](docs/02-azure-infrastructure.md) | Deploy and verify the VMs |
+| 03 | [Intune enrollment](docs/03-intune-enrollment.md) | Automatic enrollment and Entra join |
+| 04 | [Compliance policy](docs/04-compliance-policy.md) | Group, policy, evaluation, drift |
+| 05 | [Conditional Access](docs/05-conditional-access.md) | Report-only testing and enforcement |
+| 06 | [Validation and troubleshooting](docs/06-validation-and-troubleshooting.md) | Commands and common issues |
+| 07 | [Cleanup](docs/07-cleanup.md) | Restore and remove everything |
+
+**Reference pages:**
+
+| Page | Description |
 |---|---|
-| [Documentation home](docs/index.md) | Learning path and reading order |
-| [Architecture](docs/architecture.md) | Azure topology, Intune/Entra relationships, and design decisions |
-| [Prerequisites](docs/prerequisites.md) | Subscriptions, licenses, roles, tools, and cost |
-| [Setup guide](docs/setup-guide.md) | Deploying and destroying the Azure infrastructure |
-| [Device enrollment](docs/device-enrollment.md) | Entra join and Intune automatic enrollment of the VMs |
-| [Compliance policies](docs/compliance-policies.md) | Policy design, evaluation, and state lifecycle |
-| [CLIENT-02 lab script](docs/client02-lab-script.md) | Reference for `Set-Client02LabState.ps1` |
-| [Conditional Access](docs/conditional-access.md) | Optional: require compliant devices, in Report-only first |
-| [Lab scenarios](docs/lab-scenarios.md) | Step-by-step guided exercises |
-| [Validation and testing](docs/validation-and-testing.md) | How to prove each stage worked |
-| [Troubleshooting](docs/troubleshooting.md) | Common errors and fixes |
+| [Documentation home](docs/index.md) | Learning path and document map |
+| [Architecture](docs/architecture.md) | Topology, design decisions, VM limitations |
+| [Setup guide](docs/setup-guide.md) | Detailed Terraform deployment and teardown |
+| [Device enrollment](docs/device-enrollment.md) | Join vs. enrollment, sequence, validation |
+| [Compliance policies](docs/compliance-policies.md) | Policy design, evaluation, state lifecycle |
+| [Conditional Access](docs/conditional-access.md) | Decision flow, testing, enforcement |
+| [Lab scenarios](docs/lab-scenarios.md) | Guided exercises with durations |
+| [Validation and testing](docs/validation-and-testing.md) | Evidence to collect at each stage |
 | [Security considerations](docs/security-considerations.md) | Threat model and safe operation |
-| [FAQ](docs/faq.md) and [Glossary](docs/glossary.md) | Quick answers and terminology |
+| [FAQ](docs/faq.md) · [Glossary](docs/glossary.md) | Quick answers and terminology |
 
-## Expected lab outcomes
+## Troubleshooting
 
-After you complete the scenarios, you should observe the following. These are **expected**, not guaranteed, outcomes. Actual results depend on your policy, tenant settings, Windows build, and check-in timing.
+| Problem | Quick fix |
+|---|---|
+| RDP blocked: portal shows `DefaultRule_DenyAllInBound` | Your IP changed. Run `terraform apply`, or update `allowed_rdp_cidr` |
+| `allowed_rdp_cidr is still an example documentation address` | Replace `203.0.113.10/32` with your real IP, or remove the line |
+| Device in Entra ID but not in Intune | Add the test user to the MDM user scope, then re-join |
+| CLIENT-02 still Compliant after `Apply` | Sync the device and wait a few minutes |
 
-| Device | Device state | Expected Intune compliance state | Expected CA result (Report-only) |
-|---|---|---|---|
-| `CLIENT-01` | Firewall on, Defender RTP on | Compliant | Would be granted |
-| `CLIENT-02` after `Apply` | Firewall off, RTP off (if not blocked by Tamper Protection) | Not compliant | Would be blocked |
-| `CLIENT-02` after `Restore` | Original settings restored | Returns to Compliant after next check-in | Would be granted |
+More: [06 - Validation and troubleshooting](docs/06-validation-and-troubleshooting.md) and [Troubleshooting](docs/troubleshooting.md). When opening an issue, **never** include tenant IDs, subscription IDs, public IPs, or credentials.
 
-## Troubleshooting and support
+## Contributing and license
 
-- Start with [Troubleshooting](docs/troubleshooting.md). It covers Terraform/Azure errors, enrollment, compliance, the drift script, and Conditional Access.
-- Check [FAQ](docs/faq.md) for common questions.
-- Open a GitHub issue with redacted logs. **Never** include tenant IDs, subscription IDs, public IPs, or credentials.
-
-## Contributing
-
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for workflow, validation commands, and public-repository hygiene rules.
-
-## License
-
-Released under the [MIT License](LICENSE).
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow, validation commands, and hygiene rules. Released under the [MIT License](LICENSE).
 
 > [!NOTE]
 > This is a community training lab, not a production reference architecture. Validate licensing, regional availability, security, and current Microsoft product behavior before use.

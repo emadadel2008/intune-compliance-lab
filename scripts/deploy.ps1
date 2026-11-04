@@ -16,8 +16,8 @@ if ($LASTEXITCODE -ne 0) {
 
 if (-not (Test-Path ".\terraform.tfvars")) {
     Copy-Item ".\terraform.tfvars.example" ".\terraform.tfvars"
-    Write-Host "Created terraform.tfvars. Edit location and allowed_rdp_cidr before continuing." -ForegroundColor Yellow
-    notepad ".\terraform.tfvars"
+    Write-Host "Created terraform.tfvars. Review it in Notepad, save, and close Notepad to continue." -ForegroundColor Yellow
+    Start-Process notepad.exe -ArgumentList ".\terraform.tfvars" -Wait
 }
 
 terraform init

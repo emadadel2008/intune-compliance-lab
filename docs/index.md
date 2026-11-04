@@ -30,6 +30,21 @@ flowchart TD
     H --> I
 ```
 
+## Step-by-step lab guide
+
+Prefer a linear path? Follow the numbered guides in order. Each one links back to the reference pages below.
+
+| Step | Guide |
+|---|---|
+| 00 | [Lab overview](00-lab-overview.md) |
+| 01 | [Prerequisites](01-prerequisites.md) |
+| 02 | [Azure infrastructure](02-azure-infrastructure.md) |
+| 03 | [Intune enrollment](03-intune-enrollment.md) |
+| 04 | [Compliance policy](04-compliance-policy.md) |
+| 05 | [Conditional Access](05-conditional-access.md) |
+| 06 | [Validation and troubleshooting](06-validation-and-troubleshooting.md) |
+| 07 | [Cleanup](07-cleanup.md) |
+
 ## Document map
 
 | # | Document | Audience | Purpose |

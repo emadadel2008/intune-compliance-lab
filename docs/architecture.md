@@ -79,7 +79,7 @@ Resource names are derived from `var.project_name` (default `intune-lab`). One e
 | `azurerm_virtual_network.lab` | `intune-lab-vnet` | `main.tf` | Address space `var.address_space` (default `10.40.0.0/16`) |
 | `azurerm_subnet.clients` | `intune-lab-clients` | `main.tf` | Prefix `var.subnet_prefix` (default `10.40.1.0/24`) |
 | `azurerm_network_security_group.lab` | `intune-lab-nsg` | `security.tf` | Inbound filtering for both VMs |
-| `azurerm_network_security_rule.allow_rdp` | `Allow-RDP-From-Admin-IP` | `security.tf` | Allow TCP 3389 from `var.allowed_rdp_cidr` only, priority 100 |
+| `azurerm_network_security_rule.allow_rdp` | `Allow-RDP-From-Admin-IP` | `security.tf` | Allow TCP 3389 from `local.rdp_source_cidr` only (pinned `allowed_rdp_cidr` or the auto-detected `/32`), priority 100 |
 | `azurerm_network_interface_security_group_association.clients` | (association) | `security.tf` | Attaches the NSG to **each NIC** |
 | `azurerm_public_ip.clients` ×2 | `intune-lab-client-0N-pip` | `virtual-machines.tf` | Static, Standard SKU public IPv4 |
 | `azurerm_network_interface.clients` ×2 | `intune-lab-client-0N-nic` | `virtual-machines.tf` | Dynamic private IP in the subnet, bound to the public IP |
@@ -106,7 +106,7 @@ flowchart LR
     port -- "No" --> deny
 ```
 
-- The only custom inbound rule allows **TCP 3389** from the single IPv4 `/32` in `allowed_rdp_cidr`. Validation in [`variables.tf`](../terraform/variables.tf) rejects anything that is not a valid `/32`.
+- The only custom inbound rule allows **TCP 3389** from a single IPv4 `/32`: `allowed_rdp_cidr` if set, otherwise the public IP of the machine running Terraform, detected by `data.http.admin_public_ip`. Validation in [`variables.tf`](../terraform/variables.tf) rejects anything that is not a valid `/32`, and rejects RFC 5737 documentation addresses.
 - Azure's default NSG rules remain in effect. They allow traffic from within the VNet and from the Azure load balancer, allow all outbound traffic, and deny all other inbound traffic.
 - The NSG is associated with each **network interface**, not with the subnet.
 - Outbound Internet access is required. The VMs must reach Microsoft Entra ID, Intune, Windows Update, and Defender update endpoints.
@@ -222,7 +222,7 @@ Microsoft documents specific limitations for Windows VMs managed by Intune. See 
 
 These are observations from the repository contents, not implemented features:
 
-- The `hashicorp/http` provider is declared in [`versions.tf`](../terraform/versions.tf) but not used by any resource or data source.
+- The `hashicorp/http` provider is used only for public IP auto-detection; it makes an outbound HTTPS call to `api.ipify.org` when `allowed_rdp_cidr` is unset.
 - The VMs' system-assigned managed identities are not referenced by any role assignment or extension.
 - The NSG name is hard-coded (`intune-lab-nsg`) and does not follow `project_name`.
 - No Intune or Entra objects (policies, groups, CA) are defined as code. See [Lab scenarios](lab-scenarios.md) for manual steps and [CONTRIBUTING.md](../CONTRIBUTING.md) for suggested improvements.

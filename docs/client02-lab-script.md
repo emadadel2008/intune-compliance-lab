@@ -1,5 +1,11 @@
 # CLIENT-02 Intune Compliance Lab Script
 
+[← Documentation home](index.md) · Related: [Lab scenarios](lab-scenarios.md) · [Troubleshooting → drift script](troubleshooting.md#client-02-drift-script) · [Security considerations](security-considerations.md)
+
+> [!NOTE]
+> This page was previously `README 3.md` in the repository root. The script itself is [`Set-Client02LabState.ps1`](../Set-Client02LabState.ps1) in the repository root.
+
+
 A PowerShell utility for a temporary Windows 11 lab device (`CLIENT-02`) used to demonstrate Microsoft Intune compliance evaluation.
 
 The script can temporarily change selected endpoint security settings, report their current state, and restore the settings captured before the lab change.

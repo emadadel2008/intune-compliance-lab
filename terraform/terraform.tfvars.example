@@ -1,0 +1,18 @@
+# Copy this file to terraform.tfvars and edit the values locally.
+# Do not commit terraform.tfvars.
+
+project_name = "intune-lab"
+location     = "uaenorth"
+vm_size      = "Standard_B2ms"
+
+# Replace with your own public IPv4 address and keep /32.
+allowed_rdp_cidr = "203.0.113.10/32"
+
+# Confirm the selected Windows image is available in your region.
+windows_sku = "win11-24h2-ent"
+
+# Set to Windows_Client only if you have the required eligible Windows license.
+license_type = "Windows_Client"
+
+# admin_password is intentionally omitted.
+# Terraform will prompt for it, or use TF_VAR_admin_password in your shell.

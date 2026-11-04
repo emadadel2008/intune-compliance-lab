@@ -17,3 +17,8 @@ output "rdp_username" {
   description = "Local administrator username."
   value       = var.admin_username
 }
+
+output "rdp_allowed_source" {
+  description = "Source CIDR allowed to RDP to the VMs (from allowed_rdp_cidr or auto-detected)."
+  value       = local.rdp_source_cidr
+}

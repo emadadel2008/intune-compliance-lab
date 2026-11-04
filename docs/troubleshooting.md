@@ -23,6 +23,8 @@ Find your symptom and follow the fix. When you open an issue, **redact** tenant 
 | `Cannot find path '...\terraform.tfvars.example'` | `deploy.ps1` / `destroy.ps1` run from the wrong directory | `cd terraform`, then `..\scripts\deploy.ps1` |
 | Plan used example values / RDP fails after first deploy | `deploy.ps1` created `terraform.tfvars` and continued before you edited it | Edit `terraform.tfvars`, then rerun `terraform plan` / `apply` |
 | `allowed_rdp_cidr must be a valid IPv4 /32 CIDR...` | Missing `/32`, IPv6, or a typo | Use `YOUR_PUBLIC_IP/32` |
+| `allowed_rdp_cidr is still an example documentation address` | The example value `203.0.113.10/32` was left in `terraform.tfvars` | Set your real IP, or remove the line to auto-detect |
+| `Could not detect your public IPv4 address from api.ipify.org` | No outbound access to `api.ipify.org` (proxy, firewall) | Set `allowed_rdp_cidr = "YOUR_PUBLIC_IP/32"` in `terraform.tfvars` |
 | `admin_password must be at least 12 characters long.` | Short password | Use a longer password |
 | Azure rejects the password (`InvalidParameter` on `adminPassword`) | Azure complexity rules not met | Use upper, lower, digit, and symbol; avoid disallowed values such as `Password1!` |
 | `MissingSubscriptionRegistration` | `providers.tf` sets `resource_provider_registrations = "none"` | `az provider register --namespace Microsoft.Compute` (and `Microsoft.Network`), then wait for `Registered` |
@@ -36,7 +38,7 @@ Find your symptom and follow the fix. When you open an issue, **redact** tenant 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Connection times out | Your public IP changed, or your egress IP differs (VPN, proxy, CGNAT) | Recheck your IP, update `allowed_rdp_cidr`, `terraform apply` |
+| Connection times out, portal shows `DefaultRule_DenyAllInBound` | Your public IP changed, or your egress IP differs (VPN, proxy, CGNAT) | Compare `terraform output rdp_allowed_source` with the portal's **Source IP**. Run `terraform apply` (auto-detect), or update `allowed_rdp_cidr` and apply |
 | Times out right after an upgrade | Old open rule replaced; new rule uses an outdated IP | Same as above |
 | Times out; NSG correct | VM deallocated or still booting | `az vm start ...`; check boot diagnostics in the portal |
 | "The user name or password is incorrect" after Entra join | Windows tries to resolve the user name against Entra ID | Sign in as `.\labadmin` |

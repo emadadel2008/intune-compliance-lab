@@ -48,10 +48,9 @@ Documentation:
 These are known gaps. PRs are welcome:
 
 - Use Azure Bastion or JIT VM access instead of public RDP.
-- Remove the unused `http` provider from `versions.tf`, or use it to detect the caller's public IP.
 - Parameterize the hard-coded NSG name (`intune-lab-nsg`) using `project_name`.
 - Remove or use the unused system-assigned managed identities.
-- Make `scripts\deploy.ps1` wait for Notepad (`Start-Process notepad -Wait`) before planning, and make the scripts path-independent with `$PSScriptRoot`.
+- Make the scripts path-independent with `$PSScriptRoot`.
 - Add Intune compliance policy and Conditional Access as code (Microsoft Graph or the `azuread`/`msgraph` providers), in Report-only by default.
 - Add a remote state backend example.
 - Add CI for `terraform fmt`/`validate` and markdown link checking.

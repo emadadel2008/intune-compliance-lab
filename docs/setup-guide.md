@@ -58,14 +58,14 @@ notepad .\terraform.tfvars
 
 `terraform.tfvars` is excluded by [`.gitignore`](../.gitignore). Do not rename it to anything that is not ignored.
 
-> [!WARNING]
-> Create and edit `terraform.tfvars` **before** running `scripts\deploy.ps1`. If the file is missing, the script copies the example and opens Notepad, **but it does not wait for you to save**. It continues straight into `terraform plan` with the example values. The example `allowed_rdp_cidr` (`203.0.113.10/32`) passes validation but is a documentation address, so RDP will not work.
+> [!NOTE]
+> If `terraform.tfvars` is missing, `scripts\deploy.ps1` copies the example and opens Notepad, then waits until you close Notepad before it continues. Save your changes before closing it.
 
 ### Variable reference
 
 | Variable | Required | Default | Validation / notes |
 |---|---|---|---|
-| `allowed_rdp_cidr` | **Yes** | none | Must be a valid IPv4 CIDR ending in `/32`. Use `YOUR_PUBLIC_IP/32`. |
+| `allowed_rdp_cidr` | No | `null` (auto-detect) | If unset, Terraform detects the public IPv4 of the machine running it (via `api.ipify.org`) and allows that `/32`. If set, it must be a valid IPv4 `/32`; documentation ranges such as `203.0.113.x` are rejected. |
 | `admin_password` | **Yes** | none | Sensitive. At least 12 characters (Terraform check). Azure also enforces complexity rules. Do **not** put it in `terraform.tfvars`. |
 | `location` | No | `uaenorth` | Any region with the image, size, and capacity |
 | `project_name` | No | `intune-lab` | 3–16 chars, `[a-z0-9-]`; prefixes most resource names |
@@ -76,13 +76,13 @@ notepad .\terraform.tfvars
 | `license_type` | No | `Windows_Client` | Set only if you have eligible Windows licensing |
 | `address_space` / `subnet_prefix` | No | `10.40.0.0/16` / `10.40.1.0/24` | Change only if they overlap with networks you peer with |
 
-Find your public IPv4 address from a trusted source, for example:
+Auto-detection is the simplest option. Pin the value instead if your egress IP differs from the machine running Terraform (VPN, proxy, CI runner), or if `api.ipify.org` is blocked on your network. To find your public IPv4 address:
 
 ```powershell
 (Invoke-RestMethod -Uri "https://api.ipify.org")
 ```
 
-Then set `allowed_rdp_cidr = "YOUR_PUBLIC_IP/32"`.
+Then set `allowed_rdp_cidr = "YOUR_PUBLIC_IP/32"`. Run `terraform output rdp_allowed_source` after apply to see the value in effect.
 
 ## Step 4: Run pre-flight checks
 
@@ -156,8 +156,8 @@ On first sign-in, let Windows finish its setup and install pending updates if po
 ### Your public IP changed
 
 ```powershell
-notepad .\terraform.tfvars      # update allowed_rdp_cidr
-terraform apply                  # updates the NSG rule in place
+# Pinned mode only: update allowed_rdp_cidr in terraform.tfvars first
+terraform apply                  # auto-detect mode picks up the new IP; updates the NSG rule in place
 ```
 
 ### Stop paying for compute between sessions

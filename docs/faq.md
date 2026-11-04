@@ -40,7 +40,7 @@ No. RDP with `.\labadmin` is a local logon. The CA policy in this lab controls s
 
 ### My public IP changed and RDP stopped working.
 
-Update `allowed_rdp_cidr` in `terraform\terraform.tfvars` and run `terraform apply`.
+Run `terraform apply`. If `allowed_rdp_cidr` is unset, Terraform detects your new IP and updates the NSG rule. If you pinned it, update the value in `terraform\terraform.tfvars` first.
 
 ### Do deallocated VMs cost money?
 
@@ -56,7 +56,7 @@ Yes. Set `location` and `vm_size` in `terraform.tfvars`. The size must support T
 
 ### What is the `http` provider in `versions.tf` used for?
 
-Nothing currently. It is declared but not referenced. See [Known gaps](architecture.md#known-gaps).
+It detects your public IPv4 address (`data.http.admin_public_ip`) when `allowed_rdp_cidr` is not set. It is not called when you set the variable.
 
 ### Is this production-ready?
 

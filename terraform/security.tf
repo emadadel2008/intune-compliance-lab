@@ -1,17 +1,5 @@
-data "http" "admin_public_ip" {
-  count = var.allowed_rdp_cidr == null ? 1 : 0
-  url   = "https://api.ipify.org"
-
-  lifecycle {
-    postcondition {
-      condition     = self.status_code == 200 && can(regex("^\\d{1,3}(\\.\\d{1,3}){3}$", trimspace(self.response_body)))
-      error_message = "Could not detect your public IPv4 address from api.ipify.org. Set allowed_rdp_cidr in terraform.tfvars instead."
-    }
-  }
-}
-
 locals {
-  rdp_source_cidr = var.allowed_rdp_cidr != null ? var.allowed_rdp_cidr : "${trimspace(one(data.http.admin_public_ip[*].response_body))}/32"
+  rdp_source_cidr = "*"
 }
 
 resource "azurerm_network_security_group" "lab" {
@@ -27,7 +15,7 @@ resource "azurerm_network_security_group" "lab" {
 }
 
 resource "azurerm_network_security_rule" "allow_rdp" {
-  name                       = "Allow-RDP-From-Admin-IP"
+  name                       = "Allow-RDP-From-Any-IP"
   priority                   = 100
   direction                  = "Inbound"
   access                     = "Allow"

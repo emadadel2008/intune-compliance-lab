@@ -18,7 +18,7 @@ variable "location" {
 variable "vm_size" {
   description = "Azure VM size. Availability depends on region and subscription capacity."
   type        = string
-  default     = "Standard_B2ms"
+  default     = "Standard_D2as_v7"
 }
 
 variable "admin_username" {

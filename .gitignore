@@ -1,15 +1,27 @@
 # Terraform working directory and state
 **/.terraform/*
+.terraform/
 *.tfstate
 *.tfstate.*
 *.tfplan
+tfplan
+*.plan
 crash.log
 crash.*.log
 
 # Local-only Terraform variables (never commit real values)
 **/terraform.tfvars
 **/*.auto.tfvars
+*.tfvars
+*.tfvars.json
 !**/terraform.tfvars.example
+!**/terraform.tfvars.json.example
+
+# Local Terraform overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # Credentials, certificates, private keys
 *.pem

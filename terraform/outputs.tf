@@ -19,6 +19,6 @@ output "rdp_username" {
 }
 
 output "rdp_allowed_source" {
-  description = "Source CIDR allowed to RDP to the VMs (from allowed_rdp_cidr or auto-detected)."
+  description = "RDP source address prefix. An asterisk allows any IP address (lab use only)."
   value       = local.rdp_source_cidr
 }

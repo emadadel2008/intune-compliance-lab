@@ -39,20 +39,9 @@ variable "admin_password" {
 }
 
 variable "allowed_rdp_cidr" {
-  description = "Administrator public IPv4 CIDR allowed to connect over RDP, for example YOUR_PUBLIC_IP/32. Leave null to auto-detect the public IP of the machine running Terraform."
+  description = "Unused compatibility input. RDP is allowed from any IP address (lab use only)."
   type        = string
   default     = null
-
-  validation {
-    condition     = var.allowed_rdp_cidr == null ? true : (can(cidrhost(var.allowed_rdp_cidr, 0)) && can(regex("^\\d{1,3}(\\.\\d{1,3}){3}/32$", var.allowed_rdp_cidr)))
-    error_message = "allowed_rdp_cidr must be a valid IPv4 /32 CIDR for one administrator address."
-  }
-
-  # RFC 5737 documentation ranges (used in examples) can never be a real admin IP.
-  validation {
-    condition     = var.allowed_rdp_cidr == null ? true : !can(regex("^(192\\.0\\.2|198\\.51\\.100|203\\.0\\.113)\\.", var.allowed_rdp_cidr))
-    error_message = "allowed_rdp_cidr is still an example documentation address. Set it to your real public IP /32, or remove it to auto-detect."
-  }
 }
 
 variable "address_space" {
